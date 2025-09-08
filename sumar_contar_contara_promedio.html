@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayudante Avanzado de Fórmulas de Excel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .table-cell-selected {
+            background-color: #dbeafe !important;
+            border: 2px solid #3b82f6;
+        }
+        .header-selected {
+            background-color: #93c5fd;
+            color: #1e3a8a;
+        }
+        .tab-active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .tab-inactive {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
+
+        <!-- Encabezado -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Ayudante Avanzado de Fórmulas de Excel</h1>
+            <p class="text-gray-600 mt-2">Para estudiantes de Educación Social.</p>
+        </div>
+
+        <!-- Selector de Modo -->
+        <div class="flex justify-center mb-6 rounded-lg p-1 bg-gray-200 w-full md:w-1/2 mx-auto">
+            <button id="mode-explore-btn" class="w-1/2 p-2 rounded-md font-semibold transition-all duration-300 tab-active">Modo Exploración</button>
+            <button id="mode-practice-btn" class="w-1/2 p-2 rounded-md font-semibold transition-all duration-300 tab-inactive">Modo Práctica</button>
+        </div>
+
+        <!-- Contenedor Principal -->
+        <div id="main-container" class="flex flex-col lg:flex-row gap-8">
+
+            <!-- Columna de Controles y Resultados -->
+            <div class="lg:w-2/5 space-y-6">
+                <!-- Controles Comunes -->
+                <div>
+                    <h2 class="font-semibold text-lg text-gray-700 mb-2">1. Selecciona una columna</h2>
+                    <p class="text-sm text-gray-500">Haz clic en un encabezado de columna (A, B, C o D) en la tabla.</p>
+                </div>
+                <div>
+                    <label for="formula-select" class="block font-semibold text-lg text-gray-700 mb-2">2. Elige una fórmula</label>
+                    <select id="formula-select" class="w-full p-3 bg-gray-100 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <option value="SUMA">SUMA</option>
+                        <option value="PROMEDIO">PROMEDIO</option>
+                        <option value="CONTAR">CONTAR</option>
+                        <option value="CONTARA">CONTARA</option>
+                    </select>
+                </div>
+
+                <!-- MODO PRÁCTICA -->
+                <div id="practice-panel" class="hidden bg-yellow-50 p-4 rounded-lg space-y-3">
+                    <h2 class="font-bold text-lg text-yellow-800">¡A Practicar!</h2>
+                    <p id="practice-question" class="text-yellow-900 font-medium"></p>
+                    <p class="text-sm text-yellow-700">Selecciona la columna y la fórmula correctas para resolverlo, y luego pulsa "Comprobar".</p>
+                    <div class="flex gap-2">
+                        <button id="check-answer-btn" class="w-full p-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition">Comprobar Respuesta</button>
+                        <button id="next-question-btn" class="w-full p-3 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition hidden">Siguiente Pregunta</button>
+                    </div>
+                     <div id="feedback-message" class="mt-2 p-3 rounded-md text-center font-semibold hidden"></div>
+                </div>
+
+                <!-- ÁREA DE RESULTADOS (común para ambos modos) -->
+                <div id="results-area" class="space-y-4 pt-4 border-t hidden">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-blue-800">¿Qué hace la fórmula <span id="formula-name-header" class="font-mono"></span>?</h3>
+                        <p id="formula-explanation" class="text-sm text-blue-700 mt-1"></p>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h3 class="font-bold text-gray-800">Sintaxis y Resultado</h3>
+                        <div class="mt-2 text-center bg-white p-3 rounded-md shadow-inner">
+                             <code id="formula-syntax" class="text-green-700 font-mono text-lg break-all"></code>
+                        </div>
+                        <div class="mt-2 text-center bg-white p-3 rounded-md shadow-inner min-h-[52px] flex items-center justify-center">
+                            <span id="formula-result" class="text-gray-900 font-bold text-2xl"></span>
+                        </div>
+                    </div>
+                    <!-- Mensaje de Error -->
+                    <div id="error-explanation" class="hidden bg-red-100 p-3 rounded-lg">
+                        <h4 class="font-bold text-red-800">¿Por qué hay un error?</h4>
+                        <p id="error-message" class="text-sm text-red-700 mt-1"></p>
+                    </div>
+                </div>
+                 <button id="reset-button" class="w-full p-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition duration-300 hidden">Limpiar Selección</button>
+            </div>
+
+            <!-- Columna de la Tabla -->
+            <div class="lg:w-3/5">
+                 <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse border border-gray-300 rounded-lg shadow-md">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th id="header-A" class="p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition" data-col="A">A<br><span class="font-normal text-sm">Proyecto</span></th>
+                                <th id="header-B" class="p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition" data-col="B">B<br><span class="font-normal text-sm">Nº Usuarios</span></th>
+                                <th id="header-C" class="p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition" data-col="C">C<br><span class="font-normal text-sm">Subvención (€)</span></th>
+                                <th id="header-D" class="p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition" data-col="D">D<br><span class="font-normal text-sm">Valoración (1-5)</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- DATOS DE EJEMPLO ---
+            const sampleData = [
+                ['Apoyo Escolar', 25, 1500, 4],
+                ['Comedor Social', 60, 5000, 5],
+                ['Ocio Juvenil', 35, null, 4],
+                ['Inserción Laboral', 'Veinte', 3200, 3],
+                ['Atención a Mayores', 40, 4500, 5]
+            ];
+            
+            const practiceQuestions = [
+                { question: "¿Cuál es el número total de usuarios atendidos en los proyectos (solo contando celdas con números)?", correctColumn: 'B', correctFormula: 'SUMA', feedback: "Para sumar todos los números de una columna, la función ideal es SUMA." },
+                { question: "¿Cuál es la valoración media de los proyectos?", correctColumn: 'D', correctFormula: 'PROMEDIO', feedback: "Para calcular la media o el promedio de un conjunto de números, usa la función PROMEDIO." },
+                { question: "¿En cuántos proyectos se ha registrado el número de usuarios con una cifra numérica?", correctColumn: 'B', correctFormula: 'CONTAR', feedback: "Recuerda que CONTAR solo tiene en cuenta las celdas con números." },
+                { question: "¿Cuántos proyectos tienen una subvención registrada (es decir, la celda no está vacía)?", correctColumn: 'C', correctFormula: 'CONTARA', feedback: "Para contar todas las celdas que no están vacías (números o texto), CONTARA es la función correcta." }
+            ];
+            let currentQuestionIndex = 0;
+
+            // --- ESTADO DE LA APP ---
+            let selectedColumn = null;
+            let selectedRange = '';
+            let currentMode = 'explore'; // 'explore' or 'practice'
+
+            // --- ELEMENTOS DEL DOM ---
+            const elements = {
+                tableBody: document.getElementById('data-table-body'),
+                formulaSelect: document.getElementById('formula-select'),
+                resultsArea: document.getElementById('results-area'),
+                formulaNameHeader: document.getElementById('formula-name-header'),
+                explanationEl: document.getElementById('formula-explanation'),
+                syntaxEl: document.getElementById('formula-syntax'),
+                resultEl: document.getElementById('formula-result'),
+                resetButton: document.getElementById('reset-button'),
+                errorExplanation: document.getElementById('error-explanation'),
+                errorMessage: document.getElementById('error-message'),
+                modeExploreBtn: document.getElementById('mode-explore-btn'),
+                modePracticeBtn: document.getElementById('mode-practice-btn'),
+                practicePanel: document.getElementById('practice-panel'),
+                practiceQuestion: document.getElementById('practice-question'),
+                checkAnswerBtn: document.getElementById('check-answer-btn'),
+                nextQuestionBtn: document.getElementById('next-question-btn'),
+                feedbackMessage: document.getElementById('feedback-message')
+            };
+
+            const explanations = {
+                'SUMA': 'Suma todos los valores numéricos en un rango. Ignora el texto y las celdas vacías.',
+                'PROMEDIO': 'Calcula la media de todos los valores numéricos. Ignora texto y celdas vacías.',
+                'CONTAR': 'Cuenta únicamente las celdas que contienen números.',
+                'CONTARA': 'Cuenta todas las celdas que no están vacías (números o texto).'
+            };
+
+            // --- FUNCIONES ---
+            function renderTable() {
+                elements.tableBody.innerHTML = '';
+                sampleData.forEach((rowData, rowIndex) => {
+                    const row = document.createElement('tr');
+                    rowData.forEach((cellData, colIndex) => {
+                        const cell = document.createElement('td');
+                        cell.className = 'p-3 border border-gray-300 text-center';
+                        const colLetter = String.fromCharCode(65 + colIndex);
+                        cell.id = `${colLetter}${rowIndex + 2}`;
+                        cell.textContent = cellData === null ? '' : cellData;
+                        row.appendChild(cell);
+                    });
+                    elements.tableBody.appendChild(row);
+                });
+            }
+            
+            function switchMode(newMode) {
+                currentMode = newMode;
+                resetSelection();
+                if (newMode === 'explore') {
+                    elements.modeExploreBtn.classList.replace('tab-inactive', 'tab-active');
+                    elements.modePracticeBtn.classList.replace('tab-active', 'tab-inactive');
+                    elements.practicePanel.style.display = 'none';
+                } else {
+                    elements.modePracticeBtn.classList.replace('tab-inactive', 'tab-active');
+                    elements.modeExploreBtn.classList.replace('tab-active', 'tab-inactive');
+                    elements.practicePanel.style.display = 'block';
+                    loadPracticeQuestion();
+                }
+            }
+
+            function loadPracticeQuestion() {
+                elements.practiceQuestion.textContent = practiceQuestions[currentQuestionIndex].question;
+                elements.feedbackMessage.classList.add('hidden');
+                elements.checkAnswerBtn.classList.remove('hidden');
+                elements.nextQuestionBtn.classList.add('hidden');
+            }
+            
+            function checkAnswer() {
+                const correctAnswer = practiceQuestions[currentQuestionIndex];
+                if (selectedColumn === correctAnswer.correctColumn && elements.formulaSelect.value === correctAnswer.correctFormula) {
+                    elements.feedbackMessage.textContent = '¡Correcto! Bien hecho.';
+                    elements.feedbackMessage.className = 'mt-2 p-3 rounded-md text-center font-semibold bg-green-100 text-green-800';
+                    elements.nextQuestionBtn.classList.remove('hidden');
+                    elements.checkAnswerBtn.classList.add('hidden');
+                } else {
+                    elements.feedbackMessage.textContent = `No es correcto. Pista: ${correctAnswer.feedback}`;
+                    elements.feedbackMessage.className = 'mt-2 p-3 rounded-md text-center font-semibold bg-red-100 text-red-800';
+                }
+                elements.feedbackMessage.classList.remove('hidden');
+            }
+
+            function nextQuestion() {
+                currentQuestionIndex = (currentQuestionIndex + 1) % practiceQuestions.length;
+                resetSelection();
+                loadPracticeQuestion();
+            }
+
+            function resetSelection() {
+                selectedColumn = null;
+                selectedRange = '';
+                document.querySelectorAll('.table-cell-selected').forEach(c => c.classList.remove('table-cell-selected'));
+                document.querySelectorAll('.header-selected').forEach(h => h.classList.remove('header-selected'));
+                elements.resultsArea.classList.add('hidden');
+                elements.resetButton.classList.add('hidden');
+                elements.feedbackMessage.classList.add('hidden');
+            }
+
+            function handleColumnSelect(colLetter) {
+                if (selectedColumn !== colLetter) {
+                    resetSelection();
+                }
+                selectedColumn = colLetter;
+                const startRow = 2;
+                const endRow = sampleData.length + 1;
+                selectedRange = `${colLetter}${startRow}:${colLetter}${endRow}`;
+
+                document.getElementById(`header-${colLetter}`).classList.add('header-selected');
+                for (let i = startRow; i <= endRow; i++) {
+                    document.getElementById(`${colLetter}${i}`).classList.add('table-cell-selected');
+                }
+                elements.resultsArea.classList.remove('hidden');
+                elements.resetButton.classList.remove('hidden');
+                updateResults();
+            }
+            
+            function updateResults() {
+                if (!selectedColumn) return;
+                elements.errorExplanation.classList.add('hidden');
+
+                const formula = elements.formulaSelect.value;
+                const colIndex = selectedColumn.charCodeAt(0) - 65;
+                const columnData = sampleData.map(row => row[colIndex]);
+                const numbers = columnData.map(parseFloat).filter(n => !isNaN(n));
+
+                let result = '';
+                let error = null;
+
+                switch (formula) {
+                    case 'SUMA':
+                        result = numbers.reduce((acc, val) => acc + val, 0);
+                        break;
+                    case 'PROMEDIO':
+                        if (numbers.length > 0) {
+                            result = (numbers.reduce((a, b) => a + b, 0) / numbers.length).toFixed(2);
+                        } else {
+                            result = '#¡DIV/0!';
+                            error = 'La fórmula PROMEDIO no puede ejecutarse porque no hay valores numéricos en el rango seleccionado para calcular una media.';
+                        }
+                        break;
+                    case 'CONTAR':
+                        result = numbers.length;
+                        break;
+                    case 'CONTARA':
+                        result = columnData.filter(val => val !== null && val !== '').length;
+                        break;
+                }
+
+                elements.formulaNameHeader.textContent = formula;
+                elements.explanationEl.textContent = explanations[formula];
+                elements.syntaxEl.textContent = `=${formula}(${selectedRange})`;
+                elements.resultEl.textContent = result;
+                
+                if (error) {
+                    elements.errorExplanation.classList.remove('hidden');
+                    elements.errorMessage.textContent = error;
+                }
+            }
+
+            // --- EVENT LISTENERS ---
+            document.querySelectorAll('th[data-col]').forEach(header => {
+                header.addEventListener('click', () => handleColumnSelect(header.dataset.col));
+            });
+            elements.formulaSelect.addEventListener('change', updateResults);
+            elements.resetButton.addEventListener('click', resetSelection);
+            elements.modeExploreBtn.addEventListener('click', () => switchMode('explore'));
+            elements.modePracticeBtn.addEventListener('click', () => switchMode('practice'));
+            elements.checkAnswerBtn.addEventListener('click', checkAnswer);
+            elements.nextQuestionBtn.addEventListener('click', nextQuestion);
+
+            // --- INICIALIZACIÓN ---
+            renderTable();
+            switchMode('explore');
+        });
+    </script>
+</body>
+</html>
