@@ -12,9 +12,8 @@
         }
         .table-cell-selected {
             background-color: #dbeafe !important;
-            border: 2px solid #3b82f6;
         }
-        .header-selected {
+        .header-selected, .row-header-selected {
             background-color: #93c5fd;
             color: #1e3a8a;
         }
@@ -51,8 +50,8 @@
             <div class="lg:w-2/5 space-y-6">
                 <!-- Controles Comunes -->
                 <div>
-                    <h2 class="font-semibold text-lg text-gray-700 mb-2">1. Selecciona una columna</h2>
-                    <p class="text-sm text-gray-500">Haz clic en un encabezado de columna (A, B, C o D) en la tabla.</p>
+                    <h2 class="font-semibold text-lg text-gray-700 mb-2">1. Selecciona una columna o fila</h2>
+                    <p class="text-sm text-gray-500">Haz clic en un encabezado de columna (A, B...) o de fila (2, 3...) en la tabla.</p>
                 </div>
                 <div>
                     <label for="formula-select" class="block font-semibold text-lg text-gray-700 mb-2">2. Elige una fórmula</label>
@@ -106,6 +105,7 @@
                     <table class="min-w-full border-collapse border border-gray-300 rounded-lg shadow-md">
                         <thead class="bg-gray-200">
                             <tr>
+                                <th class="p-3 border border-gray-300 font-bold"></th>
                                 <th id="header-A" class="p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition" data-col="A">A<br><span class="font-normal text-sm">Proyecto</span></th>
                                 <th id="header-B" class="p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition" data-col="B">B<br><span class="font-normal text-sm">Nº Usuarios</span></th>
                                 <th id="header-C" class="p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition" data-col="C">C<br><span class="font-normal text-sm">Subvención (€)</span></th>
@@ -140,8 +140,9 @@
 
             // --- ESTADO DE LA APP ---
             let selectedColumn = null;
+            let selectedRow = null;
             let selectedRange = '';
-            let currentMode = 'explore'; // 'explore' or 'practice'
+            let currentMode = 'explore';
 
             // --- ELEMENTOS DEL DOM ---
             const elements = {
@@ -176,11 +177,22 @@
                 elements.tableBody.innerHTML = '';
                 sampleData.forEach((rowData, rowIndex) => {
                     const row = document.createElement('tr');
+                    const rowNumber = rowIndex + 2;
+
+                    const rowHeader = document.createElement('th');
+                    rowHeader.scope = 'row';
+                    rowHeader.className = 'p-3 border border-gray-300 font-bold cursor-pointer hover:bg-gray-300 transition';
+                    rowHeader.id = `header-row-${rowNumber}`;
+                    rowHeader.dataset.row = rowNumber;
+                    rowHeader.textContent = rowNumber;
+                    rowHeader.addEventListener('click', () => handleRowSelect(rowNumber));
+                    row.appendChild(rowHeader);
+
                     rowData.forEach((cellData, colIndex) => {
                         const cell = document.createElement('td');
                         cell.className = 'p-3 border border-gray-300 text-center';
                         const colLetter = String.fromCharCode(65 + colIndex);
-                        cell.id = `${colLetter}${rowIndex + 2}`;
+                        cell.id = `${colLetter}${rowNumber}`;
                         cell.textContent = cellData === null ? '' : cellData;
                         row.appendChild(cell);
                     });
@@ -232,18 +244,18 @@
 
             function resetSelection() {
                 selectedColumn = null;
+                selectedRow = null;
                 selectedRange = '';
                 document.querySelectorAll('.table-cell-selected').forEach(c => c.classList.remove('table-cell-selected'));
                 document.querySelectorAll('.header-selected').forEach(h => h.classList.remove('header-selected'));
+                document.querySelectorAll('.row-header-selected').forEach(h => h.classList.remove('row-header-selected'));
                 elements.resultsArea.classList.add('hidden');
                 elements.resetButton.classList.add('hidden');
                 elements.feedbackMessage.classList.add('hidden');
             }
 
             function handleColumnSelect(colLetter) {
-                if (selectedColumn !== colLetter) {
-                    resetSelection();
-                }
+                resetSelection();
                 selectedColumn = colLetter;
                 const startRow = 2;
                 const endRow = sampleData.length + 1;
@@ -257,16 +269,40 @@
                 elements.resetButton.classList.remove('hidden');
                 updateResults();
             }
+
+            function handleRowSelect(rowNumber) {
+                resetSelection();
+                selectedRow = rowNumber;
+                const startCol = 'A';
+                const endCol = String.fromCharCode(65 + sampleData[0].length - 1);
+                selectedRange = `${startCol}${rowNumber}:${endCol}${rowNumber}`;
+
+                document.getElementById(`header-row-${rowNumber}`).classList.add('row-header-selected');
+                for (let i = 0; i < sampleData[0].length; i++) {
+                    const colLetter = String.fromCharCode(65 + i);
+                    document.getElementById(`${colLetter}${rowNumber}`).classList.add('table-cell-selected');
+                }
+                elements.resultsArea.classList.remove('hidden');
+                elements.resetButton.classList.remove('hidden');
+                updateResults();
+            }
             
             function updateResults() {
-                if (!selectedColumn) return;
+                if (!selectedColumn && !selectedRow) return;
                 elements.errorExplanation.classList.add('hidden');
 
                 const formula = elements.formulaSelect.value;
-                const colIndex = selectedColumn.charCodeAt(0) - 65;
-                const columnData = sampleData.map(row => row[colIndex]);
-                const numbers = columnData.map(parseFloat).filter(n => !isNaN(n));
+                let dataToProcess = [];
+                
+                if (selectedColumn) {
+                    const colIndex = selectedColumn.charCodeAt(0) - 65;
+                    dataToProcess = sampleData.map(row => row[colIndex]);
+                } else if (selectedRow) {
+                    const rowIndex = selectedRow - 2;
+                    dataToProcess = sampleData[rowIndex];
+                }
 
+                const numbers = dataToProcess.map(parseFloat).filter(n => !isNaN(n));
                 let result = '';
                 let error = null;
 
@@ -286,7 +322,7 @@
                         result = numbers.length;
                         break;
                     case 'CONTARA':
-                        result = columnData.filter(val => val !== null && val !== '').length;
+                        result = dataToProcess.filter(val => val !== null && val !== '').length;
                         break;
                 }
 
@@ -319,3 +355,4 @@
     </script>
 </body>
 </html>
+
